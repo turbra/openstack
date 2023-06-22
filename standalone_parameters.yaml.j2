@@ -1,0 +1,235 @@
+#vi:syntax=yaml
+{% if dcib is defined %}
+resource_registry:
+
+{% if post_deployment is true %}
+  OS::TripleO::NodeExtraConfigPost: /home/stack/standalone_postconfig.yaml
+{% endif %}
+
+{% if enable_aodh is true %}
+  OS::TripleO::Services::AodhApi: /usr/share/openstack-tripleo-heat-templates/deployment/aodh/aodh-api-container-puppet.yaml
+  OS::TripleO::Services::AodhEvaluator: /usr/share/openstack-tripleo-heat-templates/deployment/aodh/aodh-evaluator-container-puppet.yaml
+  OS::TripleO::Services::AodhListener: /usr/share/openstack-tripleo-heat-templates/deployment/aodh/aodh-listener-container-puppet.yaml
+  OS::TripleO::Services::AodhNotifier: /usr/share/openstack-tripleo-heat-templates/deployment/aodh/aodh-notifier-container-puppet.yaml
+{% endif %}
+
+{% if enable_heat is true %}
+  OS::TripleO::Services::HeatApi: /usr/share/openstack-tripleo-heat-templates/deployment/heat/heat-api-container-puppet.yaml
+  OS::TripleO::Services::HeatApiCfn: /usr/share/openstack-tripleo-heat-templates/deployment/heat/heat-api-cfn-container-puppet.yaml
+  OS::TripleO::Services::HeatEngine: /usr/share/openstack-tripleo-heat-templates/deployment/heat/heat-engine-container-puppet.yaml
+{% endif %}
+
+{% if enable_tempest is true %}
+  OS::TripleO::Services::Tempest: /usr/share/openstack-tripleo-heat-templates/deployment/undercloud/tempest-container-puppet.yaml
+{% endif %}
+
+
+{% if enable_designate is true %}
+  OS::TripleO::Services::DesignateApi: /usr/share/openstack-tripleo-heat-templates/deployment/experimental/designate/designate-api-container-puppet.yaml
+  OS::TripleO::Services::DesignateCentral: /usr/share/openstack-tripleo-heat-templates/deployment/experimental/designate/designate-central-container-puppet.yaml
+  OS::TripleO::Services::DesignateProducer: /usr/share/openstack-tripleo-heat-templates/deployment/experimental/designate/designate-producer-container-puppet.yaml
+  OS::TripleO::Services::DesignateWorker: /usr/share/openstack-tripleo-heat-templates/deployment/experimental/designate/designate-worker-container-puppet.yaml
+  OS::TripleO::Services::DesignateMDNS: /usr/share/openstack-tripleo-heat-templates/deployment/experimental/designate/designate-mdns-container-puppet.yaml
+{% endif %}
+
+{% endif %}
+
+{% if dcn_az is defined %}
+resource_registry:
+  OS::TripleO::Services::NovaAZConfig: /usr/share/openstack-tripleo-heat-templates/deployment/nova/nova-az-config.yaml
+{% if dcn_az != 'central' %}
+  OS::TripleO::Services::CinderVolume: /usr/share/openstack-tripleo-heat-templates/deployment/cinder/cinder-volume-container-puppet.yaml
+  OS::TripleO::Services::Etcd: /usr/share/openstack-tripleo-heat-templates/deployment/etcd/etcd-container-puppet.yaml
+  OS::TripleO::Services::CACerts: OS::Heat::None
+  OS::TripleO::Services::CinderApi: OS::Heat::None
+  OS::TripleO::Services::CinderScheduler: OS::Heat::None
+  OS::TripleO::Services::Clustercheck: OS::Heat::None
+  OS::TripleO::Services::GlanceApi: OS::Heat::None
+  OS::TripleO::Services::HAproxy: OS::Heat::None
+  OS::TripleO::Services::Horizon: OS::Heat::None
+  OS::TripleO::Services::Keystone: OS::Heat::None
+  OS::TripleO::Services::Memcached: OS::Heat::None
+  OS::TripleO::Services::MySQL: OS::Heat::None
+  OS::TripleO::Services::NeutronApi: OS::Heat::None
+  OS::TripleO::Services::NeutronDhcpAgent: OS::Heat::None
+  OS::TripleO::Services::NovaApi: OS::Heat::None
+  OS::TripleO::Services::NovaConductor: OS::Heat::None
+  OS::TripleO::Services::NovaConsoleauth: OS::Heat::None
+  OS::TripleO::Services::NovaIronic: OS::Heat::None
+  OS::TripleO::Services::NovaMetadata: OS::Heat::None
+  OS::TripleO::Services::NovaPlacement: OS::Heat::None
+  OS::TripleO::Services::NovaScheduler: OS::Heat::None
+  OS::TripleO::Services::NovaVncProxy: OS::Heat::None
+  OS::TripleO::Services::OVNDBs: OS::Heat::None
+  OS::TripleO::Services::OsloMessagingNotify: OS::Heat::None
+  OS::TripleO::Services::OsloMessagingRpc: OS::Heat::None
+  OS::TripleO::Services::Pacemaker: OS::Heat::None
+  OS::TripleO::Services::PlacementApi: OS::Heat::None
+  OS::TripleO::Services::Pacemaker: OS::Heat::None
+  OS::TripleO::Services::Redis: OS::Heat::None
+  OS::TripleO::Services::SwiftProxy: OS::Heat::None
+  OS::TripleO::Services::SwiftRingBuilder: OS::Heat::None
+  OS::TripleO::Services::SwiftStorage: OS::Heat::None
+{% endif %}
+{% endif %}
+{% if extra_heat_resource_registry is defined %}
+resource_registry:
+{% for key, value in extra_heat_resource_registry.items() %}
+  {{ key }}: {{ value }}
+{% endfor %}
+{% endif %}
+parameter_defaults:
+  CloudName: {{ hostname }}.{{ clouddomain }}
+  ContainerCli: podman
+  Debug: false
+
+{% if enable_zaqar is true %}
+  ZaqarMessageStore: 'swift'
+  ZaqarManagementStore: 'sqlalchemy'
+{% endif %}
+
+  DeploymentUser: {{ ansible_env.USER }}
+  DnsServers:
+{% for nameserver in network_info.dns %}
+    - {{ nameserver }}
+{% endfor %}
+  # needed for vip & pacemaker
+  KernelIpNonLocalBind: 1
+  # For OSP16
+  ExtraSysctlSettings:
+    net.ipv6.conf.all.forwarding:
+      value: 1
+  # For OSP17 and beyond
+  KernelIpv6ConfAllForwarding: 1
+  DockerInsecureRegistryAddress:
+    - {{ control_plane_ip }}:8787
+  # domain name used by the host
+  CloudDomain: {{ clouddomain }}
+  NeutronDnsDomain: {{ clouddomain }}
+  NeutronBridgeMappings: {{ neutron_bridge_mappings }}
+  NeutronFlatNetworks: {{ neutron_flat_networks }}
+  NeutronGlobalPhysnetMtu: {{ neutron_mtu }}
+{% if sriov_interface is defined %}
+  OVNCMSOptions: "enable-chassis-as-gw"
+{% if neutron_physical_dev_mappings is defined %}
+  NeutronPhysicalDevMappings: {{ neutron_physical_dev_mappings }}
+{% else %}
+  NeutronPhysicalDevMappings: "hostonly-sriov:{{ sriov_interface }}"
+{% endif %}
+  NovaPCIPassthrough: {{sriov_nova_pci_passthrough | mandatory | to_json }}
+{% endif %}
+{% if dpdk_interface is defined %}
+  NovaLibvirtRxQueueSize: 1024
+  NovaLibvirtTxQueueSize: 1024
+  VhostuserSocketGroup: "hugetlbfs"
+{% endif %}
+{% if tuned_isolated_cores is defined %}
+  IsolCpusList: {{ tuned_isolated_cores }}
+  TunedProfileName: "cpu-partitioning"
+{% endif %}
+{% if kernel_args is defined %}
+  KernelArgs: "{{ kernel_args }}"
+{% endif %}
+  StandaloneEnableRoutedNetworks: false
+  StandaloneHomeDir: "{{ ansible_env.HOME }}"
+  InterfaceLocalMtu: 1500
+  SELinuxMode: permissive
+  # For OSP17+:
+  StandaloneNetworkConfigTemplate: "{{ ansible_env.HOME }}/dev-install_net_config.yaml"
+  # For OSP16:
+  StandaloneNetConfigOverride:
+    network_config:
+{% for member in net_config_json['network_config'] %}
+      - {{ member }}
+{% endfor %}
+  OctaviaGenerateCerts: true
+  OctaviaCaKeyPassphrase: "secrete"
+  OctaviaAmphoraSshKeyFile: "{{ ansible_env.HOME }}/octavia.pub"
+  OctaviaAmphoraImageFilename: "{{ ansible_env.HOME }}/amphora.qcow2"
+  BarbicanSimpleCryptoGlobalDefault: true
+  CinderApiPolicies:
+    cinder-vol-state-set:
+      key: "volume_extension:volume_admin_actions:reset_status"
+      value: "rule:admin_or_owner"
+  # We never want the node to reboot during tripleo deploy, but defer to later
+  KernelArgsDeferReboot: true
+  StandaloneExtraGroupVars:
+    tripleo_kernel_defer_reboot: true
+
+{% if ceph_enabled %}
+  {% if not ceph_adm_enabled %}
+{% include "standalone_parameters.ceph_ansible.yaml.j2" %}
+  {% endif %}
+
+  NovaComputeStartupDelay: 180
+
+  # Don't use ceph for local ephemeral storage by default: its performance is
+  # generally not good enough for etcd on a dev-install setup.
+  NovaEnableRbdBackend: false
+{% endif %}
+
+  # Configure Nova to use preallocated raw disks for consistent storage
+  # performance.
+  NovaComputeUseCowImages: false
+  NovaComputeLibvirtPreAllocateImages: space
+
+{% if admin_password is defined %}
+  AdminPassword: {{ admin_password }}
+{% endif %}
+{% if rhsm_enabled %}
+  ContainerImageRegistryCredentials:
+    registry.redhat.io:
+      {{ redhat_registry_credentials | mandatory }}
+  ContainerImageRegistryLogin: true
+{% endif %}
+{% if ssl_enabled %}
+  AddVipsToEtcHosts: true
+  HorizonSecureCookies: True
+  SSLCertificate: |
+    {{ ssl_cert | indent }}
+  SSLKey: |
+    {{ ssl_key | indent }}
+  SSLRootCertificate: |
+    {{ ssl_ca_cert | indent }}
+  PublicTLSCAFile: {{ ssl_ca_cert_path }}
+{% endif %}
+{% if dcn_az is defined %}
+{% if dcn_az == 'central' %}
+  NovaSchedulerDiscoverHostsInCellsInterval: 120
+  GlanceBackendID: central
+  GlanceEnabledImportMethods: web-download,copy-image
+  GlanceStoreDescription: 'central rbd glance store'
+{% else %}
+  # BZ#1901143 and BZ#1903005
+  CephClusterName: {{ dcn_az }}
+{% endif %}
+  CinderStorageAvailabilityZone: {{ dcn_az }}
+  NeutronDefaultAvailabilityZones: {{ dcn_az }}
+  NovaComputeAvailabilityZone: {{ dcn_az }}
+  NovaCrossAZAttach: false
+  OVNCMSOptions: "enable-chassis-as-gw,availability-zones={{ dcn_az }}"
+{% endif %}
+{% if standalone_extra_config|length > 0 or dcn_az is defined or manila_enabled %}
+  StandaloneExtraConfig:
+{% if dcn_az is defined %}
+    nova::availability_zone::default_schedule_zone: {{ dcn_az }}
+    oslo_messaging_notify_use_ssl: false
+    oslo_messaging_rpc_use_ssl: false
+{% endif %}
+{% if manila_enabled %}
+    ganesha_vip: "{{ public_api }}"
+    # for cephadm support on OSP 17
+    tripleo_cephadm_ceph_nfs_bind_addr: "{{ public_api }}"
+{% endif %}
+{% if standalone_extra_config|length > 0 %}
+{% for key, value in standalone_extra_config.items() %}
+    {{ key }}: {{ value }}
+{% endfor %}
+{% endif %}
+{% endif %}
+{# note: keep this block at the very end #}
+{% if extra_heat_params is defined %}
+{% for key, value in extra_heat_params.items() %}
+  {{ key }}: {{ value }}
+{% endfor %}
+{% endif %}
