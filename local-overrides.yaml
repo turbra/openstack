@@ -1,0 +1,17 @@
+# Override default variables by putting them in this file
+standalone_host: 192.168.1.228
+public_api: 192.168.1.228
+rhos_release: 17.0
+hostname: rhos-17
+clouddomain: home.lan
+local_cloudname: rhos-17
+openshift_password: openshift
+ceph_devices:
+  - /dev/sda
+extra_heat_params:
+  NovaComputeStartupDelay: 0
+
+dcib: true
+enable_aodh: false
+enable_heat: true
+enable_tempest: false
